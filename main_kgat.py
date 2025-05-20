@@ -31,7 +31,7 @@ def evaluate(model, dataloader, Ks, device):
     item_ids = torch.arange(n_items, dtype=torch.long).to(device)
 
     cf_scores = []
-    metric_names = ['precision', 'recall', 'ndcg']
+    metric_names = ['precision', 'recall', 'ndcg','f1', 'map']
     metrics_dict = {k: {m: [] for m in metric_names} for k in Ks}
 
     with tqdm(total=len(user_ids_batches), desc='Evaluating Iteration') as pbar:
@@ -99,7 +99,7 @@ def train(args):
     k_max = max(Ks)
 
     epoch_list = []
-    metrics_list = {k: {'precision': [], 'recall': [], 'ndcg': []} for k in Ks}
+    metrics_list = {k: {'precision': [], 'recall': [], 'ndcg': [], 'f1': [], 'map': []} for k in Ks}
 
     # train model
     for epoch in range(1, args.n_epoch + 1):
@@ -181,7 +181,7 @@ def train(args):
 
             epoch_list.append(epoch)
             for k in Ks:
-                for m in ['precision', 'recall', 'ndcg']:
+                for m in ['precision', 'recall', 'ndcg', 'f1', 'map']:
                     metrics_list[k][m].append(metrics_dict[k][m])
             best_recall, should_stop = early_stopping(metrics_list[k_min]['recall'], args.stopping_steps)
 
@@ -197,7 +197,7 @@ def train(args):
     metrics_df = [epoch_list]
     metrics_cols = ['epoch_idx']
     for k in Ks:
-        for m in ['precision', 'recall', 'ndcg']:
+        for m in ['precision', 'recall', 'ndcg', 'f1', 'map']:
             metrics_df.append(metrics_list[k][m])
             metrics_cols.append('{}@{}'.format(m, k))
     metrics_df = pd.DataFrame(metrics_df).transpose()

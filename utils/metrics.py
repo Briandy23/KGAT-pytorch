@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from sklearn.metrics import roc_auc_score, log_loss, mean_squared_error
 
-
 def calc_recall(rank, ground_truth, k):
     """
     calculate recall of one example
@@ -102,6 +101,18 @@ def F1(pre, rec):
         return 0.
 
 
+def mean_average_precision(hits, k):
+    """
+    Calculate Mean Average Precision at k
+    hits: array, shape (n_users, n_items), binary (0 / 1)
+    """
+    ap_scores = []
+    for hit in hits:
+        ap = average_precision(hit, k)
+        ap_scores.append(ap)
+    return np.array(ap_scores)
+
+
 def calc_auc(ground_truth, prediction):
     try:
         res = roc_auc_score(y_true=ground_truth, y_score=prediction)
@@ -143,6 +154,8 @@ def calc_metrics_at_k(cf_scores, train_user_dict, test_user_dict, user_ids, item
         metrics_dict[k]['precision'] = precision_at_k_batch(binary_hit, k)
         metrics_dict[k]['recall']    = recall_at_k_batch(binary_hit, k)
         metrics_dict[k]['ndcg']      = ndcg_at_k_batch(binary_hit, k)
+        metrics_dict[k]['f1']       = F1(metrics_dict[k]['precision'], metrics_dict[k]['recall'])
+        metrics_dict[k]['map']      = mean_average_precision(binary_hit, k)
     return metrics_dict
 
 
