@@ -155,8 +155,8 @@ def calc_metrics_at_k(cf_scores, train_user_dict, test_user_dict, user_ids, item
         metrics_dict[k]['precision'] = precision_at_k_batch(binary_hit, k)
         metrics_dict[k]['recall']    = recall_at_k_batch(binary_hit, k)
         metrics_dict[k]['ndcg']      = ndcg_at_k_batch(binary_hit, k)
-        metrics_dict[k]['f1'] = F1_batch(metrics_dict[k]['precision'], metrics_dict[k]['recall'])
-        metrics_dict[k]['map']      = mean_average_precision(binary_hit, k)
+        metrics_dict[k]['f1']        = F1_batch(metrics_dict[k]['precision'], metrics_dict[k]['recall'])
+        metrics_dict[k]['map']       = mean_average_precision(binary_hit, k)
     return metrics_dict
 
 

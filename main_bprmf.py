@@ -134,8 +134,8 @@ def train(args):
         if (epoch % args.evaluate_every) == 0 or epoch == args.n_epoch:
             time3 = time()
             _, metrics_dict = evaluate(model, data, Ks, device)
-            logging.info('CF Evaluation: Epoch {:04d} | Total Time {:.1f}s | Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}]'.format(
-                epoch, time() - time3, metrics_dict[k_min]['precision'], metrics_dict[k_max]['precision'], metrics_dict[k_min]['recall'], metrics_dict[k_max]['recall'], metrics_dict[k_min]['ndcg'], metrics_dict[k_max]['ndcg']))
+            logging.info('CF Evaluation: Epoch {:04d} | Total Time {:.1f}s | Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}], F1 [{:.4f},{:.4f}], MAP[{:.4f},{:.4f}]'.format(
+                epoch, time() - time3, metrics_dict[k_min]['precision'], metrics_dict[k_max]['precision'], metrics_dict[k_min]['recall'], metrics_dict[k_max]['recall'], metrics_dict[k_min]['ndcg'], metrics_dict[k_max]['ndcg'],metrics_dict[k_min]['f1'], metrics_dict[k_max]['f1'], metrics_dict[k_min]['map'], metrics_dict[k_max]['map']))
 
             epoch_list.append(epoch)
             for k in Ks:
