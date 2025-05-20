@@ -94,11 +94,12 @@ def recall_at_k_batch(hits, k):
     return res
 
 
-def F1(pre, rec):
-    if pre + rec > 0:
-        return (2.0 * pre * rec) / (pre + rec)
-    else:
-        return 0.
+def F1_batch(pre, rec):
+    """
+    pre, rec: numpy arrays of same shape
+    return: F1 scores as numpy array
+    """
+    return np.where(pre + rec > 0, 2 * pre * rec / (pre + rec), 0.)
 
 
 def mean_average_precision(hits, k):
@@ -154,7 +155,7 @@ def calc_metrics_at_k(cf_scores, train_user_dict, test_user_dict, user_ids, item
         metrics_dict[k]['precision'] = precision_at_k_batch(binary_hit, k)
         metrics_dict[k]['recall']    = recall_at_k_batch(binary_hit, k)
         metrics_dict[k]['ndcg']      = ndcg_at_k_batch(binary_hit, k)
-        metrics_dict[k]['f1']       = F1(metrics_dict[k]['precision'], metrics_dict[k]['recall'])
+        metrics_dict[k]['f1'] = F1_batch(metrics_dict[k]['precision'], metrics_dict[k]['recall'])
         metrics_dict[k]['map']      = mean_average_precision(binary_hit, k)
     return metrics_dict
 
