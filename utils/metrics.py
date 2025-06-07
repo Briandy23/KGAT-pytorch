@@ -103,7 +103,7 @@ def F1_batch(pre, rec):
 
 def mean_average_precision(hits, k):
     ap_scores = [average_precision_single(hit, k) for hit in hits]
-    return np.mean(ap_scores)
+    return np.array(ap_scores)
 
 
 def calc_auc(ground_truth, prediction):
