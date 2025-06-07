@@ -15,7 +15,7 @@ def precision_at_k(hit, k):
     hit: list, element is binary (0 / 1)
     """
     hit = np.asarray(hit)[:k]
-    return np.mean(hit) if hit.size > 0 else 0.0
+    return np.mean(hit)
 
 
 def precision_at_k_batch(hits, k):
