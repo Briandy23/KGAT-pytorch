@@ -27,16 +27,15 @@ def precision_at_k_batch(hits, k):
     return res
 
 
-def average_precision(hit, cut):
+def average_precision_single(hit, k):
     """
-    calculate average precision (area under PR curve)
-    hit: list, element is binary (0 / 1)
+    hit: binary list (0/1) with exactly 1 item = 1
     """
-    hit = np.asarray(hit)[:cut]
-    precisions = [precision_at_k(hit, k + 1) for k in range(len(hit)) if hit[k] == 1]
-    if not precisions:
+    hit = np.asarray(hit)[:k]
+    if 1 not in hit:
         return 0.0
-    return np.mean(precisions)
+    idx = np.where(hit == 1)[0][0]
+    return 1.0 / (idx + 1)
 
 
 def dcg_at_k(rel, k):
@@ -103,11 +102,7 @@ def F1_batch(pre, rec):
 
 
 def mean_average_precision(hits, k):
-    """
-    Calculate Mean Average Precision at k
-    hits: array, shape (n_users, n_items), binary (0 / 1)
-    """
-    ap_scores = [average_precision(hit, k) for hit in hits]
+    ap_scores = [average_precision_single(hit, k) for hit in hits]
     return np.mean(ap_scores)
 
 
