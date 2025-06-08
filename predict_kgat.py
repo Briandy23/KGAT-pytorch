@@ -11,7 +11,7 @@ import torch.optim as optim
 from model.KGAT import KGAT
 from parser.parser_kgat import parse_kgat_args
 from utils.log_helper import *
-from utils.metrics import *
+from utils.metrics2 import *
 from utils.model_helper import *
 from data_loader.loader_kgat import DataLoaderKGAT
 
