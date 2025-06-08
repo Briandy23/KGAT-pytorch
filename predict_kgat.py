@@ -9,14 +9,14 @@ import torch.nn as nn
 import torch.optim as optim
 
 from model.KGAT import KGAT
-from parser.parser_kgat import *
+from parser.parser_kgat import parse_kgat_args
 from utils.log_helper import *
 from utils.metrics import *
 from utils.model_helper import *
 from data_loader.loader_kgat import DataLoaderKGAT
 
 
-def evaluate(model, dataloader, Ks, device):
+def evaluate(model, dataloader, Ks, device, save_cf_scores=False):
     test_batch_size = dataloader.test_batch_size
     train_user_dict = dataloader.train_user_dict
     test_user_dict = dataloader.test_user_dict
@@ -30,31 +30,36 @@ def evaluate(model, dataloader, Ks, device):
     n_items = dataloader.n_items
     item_ids = torch.arange(n_items, dtype=torch.long).to(device)
 
-    cf_scores = []
     metric_names = ['precision', 'recall', 'ndcg','f1', 'map']
-    metrics_dict = {k: {m: [] for m in metric_names} for k in Ks}
+    metrics_dict = {k: {m: 0 for m in metric_names} for k in Ks}
 
     with tqdm(total=len(user_ids_batches), desc='Evaluating Iteration') as pbar:
-        for batch_user_ids in user_ids_batches:
+        for bid, batch_user_ids in enumerate(user_ids_batches):
             batch_user_ids = batch_user_ids.to(device)
 
             with torch.no_grad():
                 batch_scores = model(batch_user_ids, item_ids, mode='predict')       # (n_batch_users, n_items)
 
             batch_scores = batch_scores.cpu()
-            batch_metrics = calc_metrics_at_k(batch_scores, train_user_dict, test_user_dict, batch_user_ids.cpu().numpy(), item_ids.cpu().numpy(), Ks)
+            batch_metrics = calc_metrics_at_k(batch_scores, train_user_dict, test_user_dict, batch_user_ids.cpu().numpy(), item_ids.cpu().numpy(), Ks, num_negatives=100)
 
-            cf_scores.append(batch_scores.numpy())
+            # print('====== lksdjflkd ======')
+            # print(batch_scores.shape)
+
+            if save_cf_scores:
+                np.save(f'{args.save_dir}/cf_scores_{bid}.npy', batch_scores.numpy())
+
             for k in Ks:
                 for m in metric_names:
-                    metrics_dict[k][m].append(batch_metrics[k][m])
+                    # print(k, m, len(batch_metrics[k][m]))
+        
+                    metrics_dict[k][m] += batch_metrics[k][m].sum()
             pbar.update(1)
 
-    cf_scores = np.concatenate(cf_scores, axis=0)
     for k in Ks:
         for m in metric_names:
-            metrics_dict[k][m] = np.concatenate(metrics_dict[k][m]).mean()
-    return cf_scores, metrics_dict
+            metrics_dict[k][m] = metrics_dict[k][m] / len(user_ids)
+    return metrics_dict
 
 
 def train(args):
@@ -175,7 +180,7 @@ def train(args):
         # evaluate cf
         if (epoch % args.evaluate_every) == 0 or epoch == args.n_epoch:
             time6 = time()
-            _, metrics_dict = evaluate(model, data, Ks, device)
+            metrics_dict = evaluate(model, data, Ks, device)
             logging.info('CF Evaluation: Epoch {:04d} | Total Time {:.1f}s | Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}], F1 [{:.4f},{:.4f}], MAP[{:.4f},{:.4f}]'.format(
                 epoch, time() - time6, 
                 metrics_dict[k_min]['precision'], metrics_dict[k_max]['precision'], 
@@ -212,13 +217,13 @@ def train(args):
 
     # print best metrics
     best_metrics = metrics_df.loc[metrics_df['epoch_idx'] == best_epoch].iloc[0].to_dict()
-    logging.info('Best CF Evaluation: Epoch {:04d} | Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}, F1 [{:.4f},{:.4f}], MAP[{:.4f},{:.4f}]]'.format(
+    logging.info('Best CF Evaluation: Epoch {:04d} | Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}], F1 [{:.4f},{:.4f}], MAP[{:.4f},{:.4f}]'.format(
         int(best_metrics['epoch_idx']), 
         best_metrics['precision@{}'.format(k_min)], best_metrics['precision@{}'.format(k_max)], 
         best_metrics['recall@{}'.format(k_min)], best_metrics['recall@{}'.format(k_max)], 
         best_metrics['ndcg@{}'.format(k_min)], best_metrics['ndcg@{}'.format(k_max)],
         best_metrics['f1@{}'.format(k_min)], best_metrics['f1@{}'.format(k_max)],
-        best_metrics['map@{}'.format(k_min)], best_metrics['map@{}'.format(k_max)],      
+        best_metrics['map@{}'.format(k_min)], best_metrics['map@{}'.format(k_max)]
         ))
 
 
@@ -239,9 +244,9 @@ def predict(args):
     k_min = min(Ks)
     k_max = max(Ks)
 
-    cf_scores, metrics_dict = evaluate(model, data, Ks, device)
+    cf_scores,metrics_dict = evaluate(model, data, Ks, device, save_cf_scores=True)
     np.save(args.save_dir + 'cf_scores.npy', cf_scores)
-    print('CF Evaluation: Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}], F1 [{:.4f},{:.4f}], MAP[{:.4f},{:.4f}]'.format(
+    print('CF Evaluation: Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}], F1 [{:.4f}, {:.4f}], MAP [{:.4f}, {:.4f}]'.format(
         metrics_dict[k_min]['precision'], metrics_dict[k_max]['precision'], 
         metrics_dict[k_min]['recall'], metrics_dict[k_max]['recall'], 
         metrics_dict[k_min]['ndcg'], metrics_dict[k_max]['ndcg'],
@@ -253,7 +258,5 @@ def predict(args):
 
 if __name__ == '__main__':
     args = parse_kgat_args()
-    train(args)
-    # predict(args)
-
-
+    # train(args)
+    predict(args)

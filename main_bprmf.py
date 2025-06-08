@@ -203,8 +203,13 @@ def predict(args):
 
     cf_scores, metrics_dict = evaluate(model, data, Ks, device)
     np.save(args.save_dir + 'cf_scores.npy', cf_scores)
-    print('CF Evaluation: Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}]'.format(
-        metrics_dict[k_min]['precision'], metrics_dict[k_max]['precision'], metrics_dict[k_min]['recall'], metrics_dict[k_max]['recall'], metrics_dict[k_min]['ndcg'], metrics_dict[k_max]['ndcg']))
+    print('CF Evaluation: Precision [{:.4f}, {:.4f}], Recall [{:.4f}, {:.4f}], NDCG [{:.4f}, {:.4f}], F1 [{:.4f}, {:.4f}], MAP [{:.4f}, {:.4f}]'.format(
+        metrics_dict[k_min]['precision'], metrics_dict[k_max]['precision'], 
+        metrics_dict[k_min]['recall'], metrics_dict[k_max]['recall'], 
+        metrics_dict[k_min]['ndcg'], metrics_dict[k_max]['ndcg'],
+        metrics_dict[k_min]['f1'], metrics_dict[k_max]['f1'],
+        metrics_dict[k_min]['map'], metrics_dict[k_max]['map']
+        ))
 
 
 
