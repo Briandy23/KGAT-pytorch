@@ -42,14 +42,13 @@ def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'
     user_ids_batches = [torch.LongTensor(d) for d in user_ids_batches]
 
     n_items = dataloader.n_items
+    n_entities = dataloader.n_entities   # Lấy số lượng entity để trừ lại
     item_ids = torch.arange(n_items, dtype=torch.long).to(device)
 
     k_max = max(Ks)  # Get maximum K for recommendation
 
     recommendations = {}
     print(f"Total users to process: {len(user_ids)}")
-    print(f"User IDs: {user_ids}")
-    print(f"User IDs batches:{user_ids_batches}")  # Print first 10 batches for debugging  # Print first 10 batches for debugging
 
     with tqdm(total=len(user_ids_batches), desc='Predicting Items') as pbar:
         for batch_user_ids in user_ids_batches:
@@ -62,7 +61,6 @@ def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'
 
             for idx, u in enumerate(batch_user_ids.cpu().numpy()):
                 # Get scores for this user
-                print(f"Processing user {u} with index {idx}")
                 scores = batch_scores[idx]
 
                 # Get items already interacted in training
@@ -74,15 +72,19 @@ def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'
                 # Get top K item indices
                 top_k_item_ids = np.argsort(scores)[::-1][:k_max]
 
-                recommendations[u] = top_k_item_ids.tolist()
+                # Giảm lại user_id về user gốc
+                original_user_id = int(u - n_entities)
+
+                recommendations[original_user_id] = top_k_item_ids.tolist()
 
             pbar.update(1)
+
     print(f"Total users processed: {len(recommendations)}")
     print(f"Top-{k_max} recommendations generated for each user.")
-    # print(recommendations)
     for i in range(10):
         if i in recommendations:
             print(f"User {i} top-{k_max} items: {recommendations[i][:10]}")
+
     # Save recommendations to file
     with open(save_path, 'w') as f:
         json.dump(recommendations, f)
