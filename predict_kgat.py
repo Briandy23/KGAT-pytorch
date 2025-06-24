@@ -75,6 +75,7 @@ def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'
             pbar.update(1)
     print(f"Total users processed: {len(recommendations)}")
     print(f"Top-{k_max} recommendations generated for each user.")
+    print(recommendations)
     for i in range(10):
         if i in recommendations:
             print(f"User {i} top-{k_max} items: {recommendations[i][:10]}")
