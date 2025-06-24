@@ -47,6 +47,9 @@ def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'
     k_max = max(Ks)  # Get maximum K for recommendation
 
     recommendations = {}
+    print(f"Total users to process: {len(user_ids)}")
+    print(f"User IDs: {user_ids}")
+    print(f"User IDs batches:{user_ids_batches}")  # Print first 10 batches for debugging  # Print first 10 batches for debugging
 
     with tqdm(total=len(user_ids_batches), desc='Predicting Items') as pbar:
         for batch_user_ids in user_ids_batches:
@@ -59,6 +62,7 @@ def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'
 
             for idx, u in enumerate(batch_user_ids.cpu().numpy()):
                 # Get scores for this user
+                print(f"Processing user {u} with index {idx}")
                 scores = batch_scores[idx]
 
                 # Get items already interacted in training
@@ -75,7 +79,7 @@ def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'
             pbar.update(1)
     print(f"Total users processed: {len(recommendations)}")
     print(f"Top-{k_max} recommendations generated for each user.")
-    print(recommendations)
+    # print(recommendations)
     for i in range(10):
         if i in recommendations:
             print(f"User {i} top-{k_max} items: {recommendations[i][:10]}")
