@@ -315,7 +315,7 @@ def predict(args):
         metrics_dict[k_min]['f1'], metrics_dict[k_max]['f1'],
         metrics_dict[k_min]['map'], metrics_dict[k_max]['map']
         ))
-    save_path = os.path.join(args.save_dir, 'recommendations.json')
+    save_path = 'recommendations.json'
     predict_item(model, Ks, device, data, save_path=save_path)
 
 
