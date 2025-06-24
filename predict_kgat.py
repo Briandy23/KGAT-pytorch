@@ -14,7 +14,72 @@ from utils.log_helper import *
 from utils.metrics2 import *
 from utils.model_helper import *
 from data_loader.loader_kgat import DataLoaderKGAT
+import json
 
+def predict_item(model, Ks, device, dataloader, save_path='recommendations.json'):
+    """
+    Predict top-K recommended items for each user and save to file.
+    
+    Args:
+        model: Trained KGAT model
+        Ks: List of K values for top-K recommendations
+        device: Device for computation (CPU/GPU)
+        dataloader: DataLoaderKGAT instance
+        save_path: Path to save recommendations (default: 'recommendations.json')
+    
+    Returns:
+        dict: Dictionary mapping user_id to list of recommended item_ids {user_id: [item_ids]}
+    """
+
+    test_batch_size = dataloader.test_batch_size
+    train_user_dict = dataloader.train_user_dict
+    test_user_dict = dataloader.test_user_dict
+
+    model.eval()
+
+    user_ids = list(test_user_dict.keys())
+    user_ids_batches = [user_ids[i:i + test_batch_size] for i in range(0, len(user_ids), test_batch_size)]
+    user_ids_batches = [torch.LongTensor(d) for d in user_ids_batches]
+
+    n_items = dataloader.n_items
+    item_ids = torch.arange(n_items, dtype=torch.long).to(device)
+
+    k_max = max(Ks)  # Get maximum K for recommendation
+
+    recommendations = {}
+
+    with tqdm(total=len(user_ids_batches), desc='Predicting Items') as pbar:
+        for batch_user_ids in user_ids_batches:
+            batch_user_ids = batch_user_ids.to(device)
+
+            with torch.no_grad():
+                batch_scores = model(batch_user_ids, item_ids, mode='predict')  # (n_batch_users, n_items)
+
+            batch_scores = batch_scores.cpu().numpy()
+
+            for idx, u in enumerate(batch_user_ids.cpu().numpy()):
+                # Get scores for this user
+                scores = batch_scores[idx]
+
+                # Get items already interacted in training
+                interacted_items = train_user_dict.get(u, [])
+
+                # Set scores of interacted items to negative infinity to exclude them
+                scores[interacted_items] = -np.inf
+
+                # Get top K item indices
+                top_k_item_ids = np.argsort(scores)[::-1][:k_max]
+
+                recommendations[u] = top_k_item_ids.tolist()
+
+            pbar.update(1)
+
+    # Save recommendations to file
+    with open(save_path, 'w') as f:
+        json.dump(recommendations, f)
+
+    print(f"Recommendations saved to {save_path}")
+    return recommendations
 
 def evaluate(model, dataloader, Ks, device, save_cf_scores=False):
     test_batch_size = dataloader.test_batch_size
@@ -60,7 +125,6 @@ def evaluate(model, dataloader, Ks, device, save_cf_scores=False):
         for m in metric_names:
             metrics_dict[k][m] = metrics_dict[k][m] / len(user_ids)
     return metrics_dict
-
 
 def train(args):
     # seed
@@ -226,7 +290,6 @@ def train(args):
         best_metrics['map@{}'.format(k_min)], best_metrics['map@{}'.format(k_max)]
         ))
 
-
 def predict(args):
     # GPU / CPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -252,7 +315,8 @@ def predict(args):
         metrics_dict[k_min]['f1'], metrics_dict[k_max]['f1'],
         metrics_dict[k_min]['map'], metrics_dict[k_max]['map']
         ))
-
+    save_path = os.path.join(args.save_dir, 'recommendations.json')
+    predict_item(model, Ks, device, data, save_path=save_path)
 
 
 if __name__ == '__main__':
